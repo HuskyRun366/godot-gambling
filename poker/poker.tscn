@@ -1,46 +1,54 @@
-[gd_scene load_steps=6 format=3 uid="uid://bt6mye0u8ssjv"]
+[gd_scene load_steps=8 format=3 uid="uid://bt6mye0u8ssjv"]
 
 [ext_resource type="Script" path="res://poker/poker.gd" id="1_7orr3"]
 [ext_resource type="Texture2D" uid="uid://k4y2jwk7d1xt" path="res://poker/WhatsApp Image 2024-11-29 at 22.35.32.jpeg" id="1_xqdxi"]
 [ext_resource type="Script" path="res://poker/fold.gd" id="2_suwxb"]
 [ext_resource type="Script" path="res://poker/call.gd" id="3_8s84s"]
 [ext_resource type="Script" path="res://poker/raise.gd" id="4_k382f"]
+[ext_resource type="PackedScene" uid="uid://bb4j5icbv8sm0" path="res://card.tscn" id="6_lrkee"]
+[ext_resource type="Texture2D" uid="uid://cktvxs5itr204" path="res://test.JPG" id="7_crudg"]
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_7orr3")
 
 [node name="fold" type="Button" parent="."]
 z_index = 1
-offset_left = 473.0
-offset_top = 579.0
-offset_right = 523.0
-offset_bottom = 610.0
+offset_left = 467.0
+offset_top = 546.0
+offset_right = 517.0
+offset_bottom = 577.0
 text = "fold"
 script = ExtResource("2_suwxb")
 
-[node name="call" type="Button" parent="."]
+[node name="callb" type="Button" parent="."]
 z_index = 1
-offset_left = 378.0
-offset_top = 578.0
-offset_right = 428.0
-offset_bottom = 609.0
+offset_left = 377.0
+offset_top = 542.0
+offset_right = 427.0
+offset_bottom = 573.0
 text = "call"
 script = ExtResource("3_8s84s")
 
 [node name="raise" type="Button" parent="."]
 z_index = 1
-offset_left = 283.0
-offset_top = 578.0
-offset_right = 333.0
-offset_bottom = 609.0
+offset_left = 280.0
+offset_top = 551.0
+offset_right = 330.0
+offset_bottom = 582.0
 text = "raise"
 script = ExtResource("4_k382f")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(582.5, 337.5)
-scale = Vector2(0.725625, 0.725873)
+position = Vector2(577, 317)
+scale = Vector2(0.725625, 0.686081)
 texture = ExtResource("1_xqdxi")
 
-[node name="TextureButton" type="TextureButton" parent="."]
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="Card" parent="." instance=ExtResource("6_lrkee")]
+position = Vector2(946, 384)
+scale = Vector2(1.35, 1.35)
+
+[node name="Player2Zone" type="Sprite2D" parent="."]
+visible = false
+z_index = 1
+position = Vector2(952, 120)
+texture = ExtResource("7_crudg")
