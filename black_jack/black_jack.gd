@@ -14,6 +14,7 @@ extends Node2D
 @onready var ins_bet_val = $ins_bet_val
 @onready var insure_box = $insure
 @onready var ins_out = $ins_label
+@onready var bet_btn = $bet_btn
 
 var HAND_POS = Vector2(939,571)
 const HAND2_POS = Vector2(1031,571)
@@ -32,7 +33,12 @@ var active_players = []
 var cp_cards = []
 
 var bet_amount:int
+
 var split_bet:int
+var has_spliten:bool
+var split_won_count:int
+var not_block:bool
+
 var won_insurance:bool
 var accepted_insurance:bool
 var insurance_am:int
@@ -72,11 +78,15 @@ func _ready() -> void:
 	reset_money.pressed.connect(_on_m_reset)
 	insurance.pressed.connect(_on_insure)
 	split.pressed.connect(_on_split)
+	bet_btn.pressed.connect(_on_bet)
 	split.visible = false
 	insurance.visible = false
 	ins_bet_val.visible = false
 	insure_box.visible = false
-	_start_game()
+	cardb.visible = false
+	holdb.visible = false
+	update_money(SimpleSave.data["money"])
+	#_start_game()
 	
 func _start_game():
 	update_money(SimpleSave.data["money"])
@@ -117,8 +127,8 @@ func add_own():
 	add_card(HAND2_POS, cp_cards.pop_front(), own_cards, own_values, false, true)
 	
 	if str(own_values[0]) == str(own_values[1]):
-		#split.visible = true
-		pass
+		split.visible = true
+	
 	if sum_array(own_values) == 21:
 		bj = true
 		if sum_array(dealer_values) == 21:
@@ -131,15 +141,15 @@ func draw_card():
 
 	own_value.text = str(sum_array(own_values))
 	
-	#for i in own_values:
-		#if own_values.count(own_values[i]) > 1:
-			#split.visible = true
+	for i in own_values.size():
+		if own_values.count(own_values[i]) > 1 && !has_spliten:
+			split.visible = true
 			#pass
 			
 	if sum_array(own_values) == 21:
 		if 7 in own_values:
 			bj = true
-	if sum_array(own_values) > 21:
+	if sum_array(own_values) > 21 and !not_block:
 		cardb.disabled = true
 		holdb.disabled = true
 		dealer_cards[1].flip()
@@ -151,7 +161,7 @@ func draw_dealer():
 	add_card(DEALER2_POS, cp_cards.pop_front(), dealer_cards, dealer_values, false, true)
 
 	dealer_value.text = str(sum_array(dealer_values))
-	if sum_array(dealer_values) > 21:
+	if sum_array(dealer_values) > 21 and !not_block:
 		cardb.disabled = true
 		holdb.disabled = true
 		dealer_cards[1].flip()
@@ -180,10 +190,11 @@ func hold(player:int):
 	if accepted_insurance:
 		insurance_am = ins_bet_val.value
 		insure_box.visible = false
-	cardb.disabled = true
-	holdb.disabled = true
-	dealer_cards[1].flip()
-	dealer_value.text = str(sum_array(dealer_values))
+	if !not_block:
+		cardb.disabled = true
+		holdb.disabled = true
+		dealer_cards[1].flip()
+		dealer_value.text = str(sum_array(dealer_values))
 	
 	while sum_array(dealer_values) < 17:
 		draw_dealer()
@@ -203,10 +214,7 @@ func hold(player:int):
 		
 	
 func win(draw_c=false):
-	if draw_c:
-		label.text = "It's a draw"
-		return
-	var win_str = ""
+	split.visible = false
 	if accepted_insurance:
 		if won_insurance:
 			SimpleSave.data["money"] += insurance_am
@@ -214,19 +222,45 @@ func win(draw_c=false):
 		else:
 			SimpleSave.data["money"] -= insurance_am
 			ins_out.text = "You lost the insurance"
+	if has_spliten:
+		move_split()
+		not_block = true
+		if winner == 5:
+			SimpleSave.data["money"] += bet_amount
+			split_won_count += 1
+		else:
+			SimpleSave.data["money"] -= bet_amount
+		has_spliten = false
+		return
+	if not_block and winner == 5:
+		split_won_count += 1
+	if draw_c:
+		label.text = "It's a draw"
+		return
+	if not_block:
+		holdb.disabled = true
+		cardb.disabled = true
+		
 	match winner:
 		5:
 			if bj:
 				SimpleSave.data["money"] += bet_amount * 1.5
 				label.text = "You won the black jack"
 			else:
+				if not_block:
+					label.text = "You won " + str(split_won_count) + " out of 2 splits"
+				else:
+					label.text = "You won the game"
 				SimpleSave.data["money"] += bet_amount
-				label.text = "You won the game"
 			update_money(SimpleSave.data["money"])
 		6:
+			if not_block:
+					label.text = "You won " + str(split_won_count) + " out of 2 splits"
+			else:
+				label.text = "Dealer won the game"
 			SimpleSave.data["money"] -= bet_amount
 			update_money(SimpleSave.data["money"])
-			label.text = "Dealer won the game"
+			
 	#print("The Winner Number is ", winner)
 	
 func update_money(amount):
@@ -236,7 +270,10 @@ func reset_game():
 	for i in dealer_cards:
 		i.remove()
 	for j in own_cards:
-		j.remove()
+		if j is card:
+			j.remove()
+	for h in split_cards:
+		h.remove()
 	own_cards = []
 	own_values = []
 	dealer_cards = []
@@ -252,6 +289,13 @@ func reset_game():
 	won_insurance = false
 	ins_bet_val.visible = false
 	insure_box.visible = false
+	cardb.visible = false
+	holdb.visible = false
+	has_spliten = false
+	not_block = false
+	bet_btn.visible = true
+	
+	split_won_count = 0
 	
 	label.text = ""
 	ins_out.text = ""
@@ -259,21 +303,36 @@ func reset_game():
 	bet_set.value = 10
 	DEALER2_POS = Vector2(577,241)
 	HAND_POS = Vector2(939,571)
-	_start_game()
 	
 func bet():
 	bet_amount = bet_set.value
 	bet_set.visible = false
+	_start_game()
+	
+func move_split():
+	accepted_insurance = false
+	HAND_POS = Vector2(939,571)
+	var count:int = 0
+	for j in split_cards:
+		if count == 0:
+			j.position = HAND_POS
+		else:
+			j.position = HAND2_POS
+			HAND_POS += Vector2(-60,0)		
+		count += 1
+	own_values = split_values
+	for i in own_cards:
+		i.visible = false
+	add_card(HAND_POS + Vector2(-60, 0), cp_cards.pop_front(), own_cards, own_values, false, true)
+	own_value.text = str(sum_array(own_values))
 	
 func _on_reset():
 	reset_game()
 
 func _on_hold():
-	bet()
 	hold(5)
 	
 func _on_draw():
-	bet()
 	draw_card()
 	
 func _on_m_reset():
@@ -281,20 +340,35 @@ func _on_m_reset():
 	SimpleSave.data["money"] = 1000
 	
 func _on_split():
-	for i in own_cards.duplicate().size():
+	not_block = true
+	for i in own_cards.size():
+		print(own_values)
 		if own_values.count(own_values[i]) == 2:
 			print(own_values[i])
 			split_cards.append(own_cards[i])
 			split_values.append(own_values[i])
+			#own_cards[own_cards.find(i)].remove()
 			own_cards.pop_at(own_cards.find(i))
 			own_values.pop_at(own_values.find(own_values[i]))
+			has_spliten = true
+			split.visible = false
+			break
 	for j in split_cards:
 		j.position = SPLIT_POS
 		SPLIT_POS += Vector2(-60,0)
+	add_card(HAND_POS, cp_cards.pop_front(), own_cards, own_values, false, true)
+	own_value.text = str(sum_array(own_values))
+		
 
 func _on_insure():
 	insurance.disabled = true
 	accepted_insurance = true
 	ins_bet_val.visible = true
 	insure_box.visible = true
+	
+func _on_bet():
+	bet()
+	cardb.visible = true
+	holdb.visible = true
+	bet_btn.visible = false
 	
